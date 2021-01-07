@@ -8,9 +8,7 @@ import collections
 from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import ExtraTreesRegressor
-from sklearn.metrics import r2_score
 from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import RepeatedStratifiedKFold
 # %%
 # --------------------------------------------
 # Adds header to the data including hero names
@@ -72,18 +70,6 @@ def sort_features(feature_importances, columns):
     return important_features_list
 
 
-def change_width(ax, new_value):
-    for patch in ax.patches:
-        current_width = patch.get_width()
-        diff = current_width - new_value
-
-        # we change the bar width
-        patch.set_width(new_value)
-
-        # we recenter the bar
-        patch.set_x(patch.get_x() + diff * .5)
-
-
 # %%
 # --------------------------------------------
 # Extra Trees on the model
@@ -91,56 +77,38 @@ def change_width(ax, new_value):
 model = ExtraTreesRegressor()
 model.fit(X, y)
 # %%
-# fig, ax = plt.subplots()
-# plt.figure(figsize=(100, 25))
+fig, ax = plt.subplots()
+plt.figure(figsize=(100, 25))
 
-# sorted_features = sort_features(
-#     model.feature_importances_, X.columns)
+sorted_features = sort_features(
+    model.feature_importances_, X.columns)
 
-# sns.barplot(ax=ax, x=sorted_features, y=sorted(
-#     model.feature_importances_, reverse=True))
+sns.barplot(ax=ax, x=sorted_features, y=sorted(
+    model.feature_importances_, reverse=True))
 
-# fig.savefig('docs/feature_importance.png')
+fig.savefig('docs/feature_importance.png')
 # %%
 # Test set
 y_test = test_df.pop('winner_team')
 X_test = test_df
 # %%
-# y_pred = model.predict(X_test)
-# # %%
-# rsqrd = r2_score(y_test, y_pred)
-# # %%
-# print(f'R2 Error: {rsqrd}')
-# # %%
-# scores = cross_val_score(
-#     model, X, y, scoring='neg_mean_squared_error', cv=5)
-# rmse = np.sqrt(-scores)
-# # %%
-# print('Reg rmse:', rmse)
-# print('Reg Mean:', rmse.mean())
-# print('---------------------------------------')
-
-# plt.figure(figsize=(18, 8))
-# sns.histplot(y_test - y_pred)
-# plt.savefig('docs/distplot.png')
-
-# plt.figure(figsize=(10, 5))
-# plt.scatter(y_test, y_pred)
-# plt.savefig('docs/scatter.png')
-
-# %%
-# evaluate a given model using cross-validation
-
-
-def evaluate_model(model, X, y):
-    # define the evaluation procedure
-    cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
-    # evaluate the model and collect the results
-    scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
-    return scores
-
-
-# %%
-scores = evaluate_model(model, X, y)
+scores = cross_val_score(
+    model, X, y, scoring='neg_mean_squared_error', cv=10, n_jobs=-1)
 # summarize the performance along the way
 print(f'Score Mean: {mean(scores)}, Score Std.: {std(scores)}')
+
+# %%
+rmse = np.sqrt(-scores)
+y_pred = model.predict(X_test)
+# # %%
+print('Reg rmse:', rmse)
+print('Reg Mean:', rmse.mean())
+print('---------------------------------------')
+
+plt.figure(figsize=(18, 8))
+sns.histplot(y_test - y_pred)
+plt.savefig('docs/distplot.png')
+
+plt.figure(figsize=(10, 5))
+plt.scatter(y_test, y_pred)
+plt.savefig('docs/scatter.png')
