@@ -1,10 +1,13 @@
 # %%
 import pandas as pd
+import numpy as np
 import json
 import collections
 from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.metrics import r2_score
+from sklearn.model_selection import cross_val_score
 # %%
 # --------------------------------------------
 # Adds header to the data including hero names
@@ -79,19 +82,46 @@ def change_width(ax, new_value):
 
 
 # %%
+# --------------------------------------------
+# Extra Trees on the model
+# --------------------------------------------
 model = ExtraTreesRegressor()
 model.fit(X, y)
 # %%
 fig, ax = plt.subplots()
-plt.figure(figsize=(70, 25))
+plt.figure(figsize=(100, 25))
 
 sorted_features = sort_features(
     model.feature_importances_, X.columns)
 
 sns.barplot(ax=ax, x=sorted_features, y=sorted(
     model.feature_importances_, reverse=True))
-change_width(ax, .1)
+# change_width(ax, .1)
 
-plt.savefig('docs/feature_importance.png')
-
+fig.savefig('docs/feature_importance.png')
 # %%
+# Test set
+y_test = test_df.pop('winner_team')
+X_test = test_df
+# %%
+y_pred = model.predict(X_test)
+# %%
+rsqrd = r2_score(y_test, y_pred)
+# %%
+print(f'R2 Error: {rsqrd}')
+# %%
+scores = cross_val_score(
+    model, X, y, scoring='neg_mean_squared_error', cv=k)
+rmse = np.sqrt(-scores)
+# %%
+print('Reg rmse:', rmse)
+print('Reg Mean:', rmse.mean())
+print('---------------------------------------')
+
+plt.figure(figsize=(18, 8))
+sns.histplot(y_test - y_pred)
+plt.savefig('docs/distplot.png')
+
+plt.figure(figsize=(10, 5))
+plt.scatter(y_test, y_pred)
+plt.savefig('docs/scatter.png')
