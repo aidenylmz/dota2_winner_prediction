@@ -9,6 +9,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import ExtraTreesRegressor
 from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 # %%
 # --------------------------------------------
 # Adds header to the data including hero names
@@ -36,6 +38,15 @@ for hero in sorted_heroes_dict.values():
 # %%
 train_df = pd.read_csv("docs/dota2Train.csv", names=headers, index_col=False)
 test_df = pd.read_csv("docs/dota2Test.csv", names=headers, index_col=False)
+
+train_df['winner_team'] = train_df['winner_team'].replace(-1, 0)
+test_df['winner_team'] = test_df['winner_team'].replace(-1, 0)
+
+# %%
+print('---------------------- TRAIN DATAFRAME ---------------------')
+print(train_df.head())
+print('---------------------- TEST DATAFRAME ---------------------')
+print(test_df.head())
 # %%
 # --------------------------------------------
 # Correlation between columns
@@ -76,7 +87,6 @@ def sort_features(feature_importances, columns):
 # --------------------------------------------
 model = ExtraTreesRegressor()
 model.fit(X, y)
-# %%
 fig, ax = plt.subplots()
 plt.figure(figsize=(100, 25))
 
@@ -93,7 +103,7 @@ y_test = test_df.pop('winner_team')
 X_test = test_df
 # %%
 scores = cross_val_score(
-    model, X, y, scoring='neg_mean_squared_error', cv=10, n_jobs=-1)
+    model, X, y, scoring='neg_mean_squared_error', cv=5, n_jobs=-1)
 # summarize the performance along the way
 print(f'Score Mean: {mean(scores)}, Score Std.: {std(scores)}')
 
@@ -101,6 +111,7 @@ print(f'Score Mean: {mean(scores)}, Score Std.: {std(scores)}')
 rmse = np.sqrt(-scores)
 y_pred = model.predict(X_test)
 # # %%
+print('----------EXTRA TREES-----------------')
 print('Reg rmse:', rmse)
 print('Reg Mean:', rmse.mean())
 print('---------------------------------------')
@@ -112,3 +123,38 @@ plt.savefig('docs/distplot.png')
 plt.figure(figsize=(10, 5))
 plt.scatter(y_test, y_pred)
 plt.savefig('docs/scatter.png')
+# %%
+# --------------------------------------------
+# Linear Regression on the model
+# --------------------------------------------
+
+
+def linear_fit(model, x, y, x_test, y_test, k=5):
+    model.fit(x, y)
+    y_pred = model.predict(x_test)
+
+    rsqrd = r2_score(y_test, y_pred)
+    print(f'k = {k} (Cross-validation splitting)')
+    print(f'R2 Error: {rsqrd}')
+
+    scores = cross_val_score(
+        model, x, y, scoring='neg_mean_squared_error', cv=k)
+    rmse = np.sqrt(-scores)
+    print('----------LINEAR REG.-----------------')
+    print('Reg rmse:', rmse)
+    print('Reg Mean:', rmse.mean())
+    print('---------------------------------------')
+
+    plt.figure(figsize=(18, 8))
+    sns.histplot(y_test - y_pred)
+    plt.savefig('docs/linear_distplot.png')
+
+    plt.figure(figsize=(10, 5))
+    plt.scatter(y_test, y_pred)
+    plt.savefig('docs/linear_scatter.png')
+
+
+reg = LinearRegression()
+linear_fit(reg, X, y, X_test, y_test)
+
+# %%
